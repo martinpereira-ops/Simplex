@@ -1,0 +1,145 @@
+{
+  "name": "Master WhatsApp Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "master-whatsapp",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "key": "=msg:{{ $json.body.data.message.id }}"
+      },
+      "name": "Redis Get",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.value }}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      },
+      "name": "IF Idempotencia",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=msg:{{ $('Webhook').item.json.body.data.message.id }}",
+        "value": "1",
+        "ttl": 3600
+      },
+      "name": "Redis Set",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM feature_flags WHERE tenant_id = $1",
+        "additionalFields": {
+          "queryParams": "={{ $('Webhook').item.json.body.data.tenantId }}"
+        }
+      },
+      "name": "Postgres (Feature Flags)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.feature_kargo_dropshipping }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "true"
+            }
+          ]
+        },
+        "fallbackOutput": 1
+      },
+      "name": "Switch (Routing)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [1250, 200]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Redis Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Get": {
+      "main": [
+        [
+          {
+            "node": "IF Idempotencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Idempotencia": {
+      "main": [
+        [
+          {
+            "node": "Redis Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Set": {
+      "main": [
+        [
+          {
+            "node": "Postgres (Feature Flags)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres (Feature Flags)": {
+      "main": [
+        [
+          {
+            "node": "Switch (Routing)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "id": "1"
+}

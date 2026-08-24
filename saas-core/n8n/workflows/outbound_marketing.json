@@ -1,0 +1,75 @@
+{
+  "name": "Outbound Marketing Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      },
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "url": "https://api.apify.com/v2/actor-tasks/YOUR_TASK/runs",
+        "options": {}
+      },
+      "name": "Apify Web Scraper",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "resume": "webhook"
+      },
+      "name": "Wait for Apify",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "sales@simplex.com",
+        "toEmail": "={{ $json.body.email }}",
+        "subject": "Oportunidad de colaboración B2B",
+        "text": "Hola, notamos su negocio en maps y nos gustaría..."
+      },
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO prospectos (email) VALUES ($1)",
+        "additionalFields": {
+          "queryParams": "={{ $json.body.email }}"
+        }
+      },
+      "name": "Postgres (Register)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": { "main": [ [ { "node": "Apify Web Scraper", "type": "main", "index": 0 } ] ] },
+    "Apify Web Scraper": { "main": [ [ { "node": "Wait for Apify", "type": "main", "index": 0 } ] ] },
+    "Wait for Apify": { "main": [ [ { "node": "Send Email", "type": "main", "index": 0 } ] ] },
+    "Send Email": { "main": [ [ { "node": "Postgres (Register)", "type": "main", "index": 0 } ] ] }
+  },
+  "active": false,
+  "settings": {},
+  "id": "3"
+}

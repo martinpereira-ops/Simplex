@@ -1,0 +1,77 @@
+{
+  "name": "Kargo E-Commerce and Shopify Bulk Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "url": "https://api.kargo.example/login",
+        "options": {}
+      },
+      "name": "Kargo Login",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.kargo.example/catalog",
+        "options": {}
+      },
+      "name": "Get Catalog",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "map",
+        "fields": "={\n  \"title\": \"{{$json.name}}\",\n  \"price\": \"{{$json.price}}\"\n}"
+      },
+      "name": "Item Lists Map",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const jsonl = items.map(item => JSON.stringify(item.json)).join('\\n');\nreturn [{ json: { jsonl } }];"
+      },
+      "name": "Generate JSONL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "url": "https://shopify.example/graphql",
+        "options": {}
+      },
+      "name": "stagedUploadsCreate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "url": "https://shopify.example/graphql",
+        "options": {}
+      },
+      "name": "bulkOperationRunMutation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Kargo Login": { "main": [ [ { "node": "Get Catalog", "type": "main", "index": 0 } ] ] },
+    "Get Catalog": { "main": [ [ { "node": "Item Lists Map", "type": "main", "index": 0 } ] ] },
+    "Item Lists Map": { "main": [ [ { "node": "Generate JSONL", "type": "main", "index": 0 } ] ] },
+    "Generate JSONL": { "main": [ [ { "node": "stagedUploadsCreate", "type": "main", "index": 0 } ] ] },
+    "stagedUploadsCreate": { "main": [ [ { "node": "bulkOperationRunMutation", "type": "main", "index": 0 } ] ] }
+  },
+  "active": false,
+  "settings": {},
+  "id": "2"
+}

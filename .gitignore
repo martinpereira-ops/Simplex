@@ -1,0 +1,6 @@
+﻿saas-core/postgres/
+saas-core/redis/
+saas-core/n8n_data/
+saas-core/evolution_instances/
+node_modules/
+.env
